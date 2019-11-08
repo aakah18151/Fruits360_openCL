@@ -3,8 +3,8 @@ __kernel void convolution( __global int* out_channels, __global int* in_channels
 	int column = get_global_id(0);
 	int row = get_global_id(1);
 
-	
-	/*if (column == 0 && row == 0)
+	/*
+	if (column == 0 && row == 0)
 	{
 		printf("Out Channels : %d, In Channels : %d, Kernel Size : %d \n",*out_channels, *in_channels, *kernel_size);
 
@@ -24,8 +24,8 @@ __kernel void convolution( __global int* out_channels, __global int* in_channels
 			}
 		}
 		
-	}*/
-	
+	}
+	*/
 
 	int halfFilterWidth = (int)((*kernel_size)/2);
 	int out_kernel_size = *in_channels * *kernel_size * *kernel_size;

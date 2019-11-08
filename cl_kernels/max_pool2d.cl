@@ -25,7 +25,7 @@ __kernel void max_pool2d(__global int* channels, __global int* inDim, __constant
 				r = row**pool_size + i;
 				c = column**pool_size + j;
                 
-				values[count] = *(inImg + c**inDim + r + channel*(*inDim * *inDim));
+				values[count] = *(inImg + r**inDim + c + channel*(*inDim * *inDim));
 				//printf("%f ",*(inImg + r**inDim + c + channel*(*inDim * *inDim)));
 				count += 1;
 			}

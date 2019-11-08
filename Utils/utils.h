@@ -1,7 +1,9 @@
 #pragma once
 
 
-float *read_image(int size, const char* img_file);
+float *read_image(int size, FILE* fp);
+
+int *read_label(int size, FILE* fp);
 
 float *read_weights(int out_channels, int in_channels, int kernel_size, const char* weight_file);
 
@@ -23,4 +25,4 @@ float *read_bias_fc(int rows, const char* weight_file);
 
 void *print_bias_fc(int rows, float* bias);
 
-void print_linear(int rows, float* vec);
+int print_linear(int rows, float* vec,int z);

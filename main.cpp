@@ -7,19 +7,39 @@
 
 #include "Utils/utils.h"
 
-static const char* input_imagePath = "B.txt";
+static const char* input_imagePath = "test_v5.dat";
+static const char* input_labelPath = "output8.txt";
+
+
 
 int main()
 {
+	FILE *fp = fopen(input_imagePath, "r");
+	FILE *fp1 = fopen(input_labelPath, "r");
+	int* hInputlabel;
+	int label = 99;
+	hInputlabel = read_label(label, fp1);
 	float* hInputImage;
-
+	int count;
+	float Acc=0;
+	
+	for(int z=0;z<99;z++)
+	{
+		
 	int imgRows = 32;
 	int imgCols = 32;
 	int imgChannels = 3;
+	
 
+	hInputImage = read_image(imgRows, fp);
+	
+	
+	//for(int y=0;y<99;y++)
+	//{
+		//std::cout<<hInputlabel[z]<<"\n";
+	//}
 
-	hInputImage = read_image(imgRows, input_imagePath);
-
+	
 	//print_image(imgChannels, imgRows, imgCols, hInputImage);
 
 
@@ -45,9 +65,9 @@ int main()
 	kernel_size = 3;
 
 	// Read parameters
-	static const char* c1_weights_file = "c1.txt";  //Change this
-	static const char* c1_bias_file = "b1.txt";   //Change this
-
+	static const char* c1_weights_file = "c1.txt";  
+	static const char* c1_bias_file = "b1.txt";   
+	
 	float *c1_weights;
 	float *c1_biases;
 	
@@ -57,7 +77,7 @@ int main()
 	c1_biases = read_bias(out_channels, c1_bias_file);
 
 	
-	//print_weights(out_channels, in_channels, kernel_size, c1_weights);
+//	print_weights(out_channels, in_channels, kernel_size, c1_weights);
 	//print_bias(out_channels, c1_biases);
 	
 	
@@ -112,14 +132,14 @@ int main()
      	kernel.setArg(7, imgRowsBuffer);
      	kernel.setArg(8, imgColsBuffer);
 
-     	cl::NDRange global(imgCols, imgRows);
+     	cl::NDRange global(imgRows, imgCols);
      	cl::NDRange local(1,1);
      	queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
 
      	// Read data back
-     	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), c1_out);
-//	for(unsigned int i=0;i<out_channels*imgRows*imgCols;i++)
-//		std::cout<<"c1_out  "<<i<<"  "<<*(c1_out+i)<<"\n";
+     queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), c1_out);
+	 // for(unsigned int i=0;i<50;i++)
+	 // std::cout<<"c1_out  "<<i<<"  "<<*(c1_out+i)<<"\n";
 	}
 	catch(cl::Error error)
 	{
@@ -233,6 +253,9 @@ int main()
 	outImgCols = get_post_maxPool_size(pool_size, imgCols);
 
 	float* c3_out;
+ 
+   float * c3_out_new;
+   c3_out_new = new float [channels*outImgRows*outImgCols];
 	c3_out = new float [channels*outImgRows*outImgCols];
 	
 	//std::cout<<"Performing Max Pool 2D"<<std::endl;
@@ -280,14 +303,32 @@ int main()
 
      	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), c3_out);
       //for(int i=0;i<channels*outImgRows*outImgCols;i++)
-	  //std::cout<<"maxpool_out"<<" "<<*(c3_out+i)<<"\n";
+	    //std::cout<<"maxpool_out"<<" "<<i<<" "<<*(c3_out+i)<<"\n";
+         
+         
+         
+         int j=0, start=0, end=4080;
+         
+         for(int i=start; i<=end&&j<4096;i=i+16,j++)
+         {
+           c3_out_new[i]=c3_out[j];
+           if(i==end)
+           {
+           i=start-15;
+           end=end+1;
+           start++;
+           }
+           }
+      //for(int i=0;i<4096;i++)
+	    //std::cout<<"Flatten :"<<" "<<i+1<<" "<<c3_out_new[i]<<"\n";   
+      //std::cout<<c3_out_new[i]<<"\n";     
 	}
 	catch(cl::Error error)
 	{
 		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
 	}
 
-//	print_image(channels, outImgRows, outImgCols, c3_out);
+  //	print_image(channels, outImgRows, outImgCols, c3_out);
 	/* ------------------------------------ Max Pool 2D Ends ------------------------------------ */
 
 	
@@ -328,7 +369,7 @@ int main()
 		cl::Buffer inFeaturesBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 		cl::Buffer outFeaturesBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
-		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_features*sizeof(float), c3_out);
+		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_features*sizeof(float), c3_out_new);
 		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_features*sizeof(float), c21_out);
 		queue.enqueueWriteBuffer(weightsBuffer, CL_TRUE, 0, in_features*out_features*sizeof(float), f3_weights);
 		queue.enqueueWriteBuffer(biasesBuffer, CL_TRUE, 0, out_features*sizeof(float), f3_biases);
@@ -361,16 +402,25 @@ int main()
      	queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local);
 
      	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_features*sizeof(float), c21_out);
+      
 //for(int i=0;i<out_features;i++)
-//	std::cout<<"final_out"<<i+1<<"   "<<*(c21_out+i)<<"\n";
+	//std::cout<<"final_out"<<i+1<<"   "<<*(c21_out+i)<<"\n";
 	}
 	catch(cl::Error error)
 	{
 		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
 	}
-
-	print_linear(out_features, c21_out);
+    
+	count=print_linear(out_features, c21_out,z);
+	// std::cout<<"IN MAIN COUNT "<<count<<"\n";
 	/* ------------------------------------ Fully Connected 2 Ends ------------------------------------ */
 
+	
+	}
+	//*fp.close();
+	 
+	 Acc= (count*100)/99;
+	
+	std::cout<<"\nACCURACY =  "<<Acc<<" %"<<"\n"<<"\n";
 	return 0;
 }
